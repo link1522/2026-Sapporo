@@ -1,0 +1,13 @@
+# GitHub Pages only: all other files stay local, including source data and passwords.
+*
+!/.gitignore
+!/index.html
+!/styles.css
+!/app.js
+!/data.enc.js
+!/sw.js
+!/manifest.webmanifest
+!/icon.svg
+!/icons/
+!/icons/icon-192.png
+!/icons/icon-512.png

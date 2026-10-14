@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, nosnippet">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="私人行程閱讀工具">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>私人行程</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="data.enc.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main id="unlock" class="unlock">
+    <div class="unlock-panel">
+      <img class="lock-icon" src="icon.svg" alt="" aria-hidden="true">
+      <p class="unlock-kicker">PRIVATE ITINERARY</p>
+      <h1>開啟私人行程</h1>
+      <p class="unlock-description">輸入共用密語，查看已儲存在此裝置的行程。</p>
+      <form id="unlock-form">
+        <label for="passphrase">共用密語</label>
+        <input id="passphrase" name="passphrase" type="password" autocomplete="current-password" minlength="6" required>
+        <button type="submit">解鎖行程</button>
+      </form>
+      <p id="unlock-message" class="unlock-message" role="status" aria-live="polite"></p>
+      <p class="unlock-footnote">密語至少 6 個字元；成功解鎖後，此裝置會記住密語。</p>
+    </div>
+  </main>
+  <div id="app" hidden></div>
+</body>
+</html>
