@@ -355,6 +355,21 @@ function renderQuickInfo() {
   }
   append(themeSettings,choices);
   append(section,themeSettings);
+  const fontSettings = element("fieldset","theme-settings");
+  append(fontSettings,element("legend","","字體大小"));
+  const fontChoices = element("div","theme-choices");
+  for (const [value,label] of [["normal","標準"],["large","較大"],["larger","最大"]]) {
+    const option = element("label","theme-choice");
+    const input = element("input","");
+    input.type = "radio";
+    input.name = "font-size";
+    input.value = value;
+    input.checked = fontSizePreference === value;
+    append(option,input,element("span","",label));
+    append(fontChoices,option);
+  }
+  append(fontSettings,fontChoices);
+  append(section,fontSettings);
   return section;
 }
 function nextTripEvent(days,now) {

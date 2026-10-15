@@ -1,6 +1,6 @@
-const CACHE_NAME = "private-itinerary-v42";
+const CACHE_NAME = "private-itinerary-v43";
 const APP_FILES = [
-  "./", "./index.html", "./app.js?v=40", "./theme.js?v=40", "./data.enc.js",
+  "./", "./index.html", "./app.js?v=41", "./theme.js?v=41", "./data.enc.js",
   "./manifest.webmanifest", "./icon.svg", "./icons/icon-192.png", "./icons/icon-512.png"
 ];
 
@@ -9,10 +9,10 @@ self.addEventListener("install", event => {
     const cache = await caches.open(CACHE_NAME);
     await cache.addAll(APP_FILES);
     // Vite returns a JS module for a generic CSS fetch; ?direct requests the stylesheet.
-    const css = await fetch("./styles.css?direct&v=42");
+    const css = await fetch("./styles.css?direct&v=43");
     if (!css.ok || !css.headers.get("content-type")?.startsWith("text/css"))
       throw new Error("Stylesheet unavailable for offline use");
-    await cache.put("./styles.css?v=42",css);
+    await cache.put("./styles.css?v=43",css);
   })());
 });
 
