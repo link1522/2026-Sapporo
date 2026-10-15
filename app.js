@@ -340,6 +340,21 @@ function renderQuickInfo() {
   infoStatus.id = "offline-status";
   append(details,element("p","",`資料更新：${trip.updated} · 日本時間（JST）`),infoStatus);
   append(section,details);
+  const themeSettings = element("fieldset","theme-settings");
+  append(themeSettings,element("legend","","顯示主題"));
+  const choices = element("div","theme-choices");
+  for (const [value,label] of [["system","跟隨系統"],["light","淺色"],["dark","深色"]]) {
+    const option = element("label","theme-choice");
+    const input = element("input","");
+    input.type = "radio";
+    input.name = "theme";
+    input.value = value;
+    input.checked = themePreference === value;
+    append(option,input,element("span","",label));
+    append(choices,option);
+  }
+  append(themeSettings,choices);
+  append(section,themeSettings);
   return section;
 }
 function nextTripEvent(days,now) {
