@@ -395,13 +395,77 @@ function showUpdateBanner() {
   const banner = app.querySelector("#update-banner");
   if (banner) banner.hidden = !serviceRegistration?.waiting;
 }
+function renderDay(day,now) {
+  const focus = day.date === now.date ? focusEvent(day,now) : {event:day.events[0],index:0};
+  if (expandedEvent === -1 && focus.event && focus.index >= 0)
+    expandedEvent = hasEventDetail(focus.event) ? focus.index : -2;
+  const dayHead = element("div","day-head");
+  const heading = element("div","");
+  append(heading,element("p","day-kicker",`${day.date} · ${day.place}`),
+    element("h1","",day.title));
+  append(dayHead,heading,element("span","day-count",`${day.events.length} 個行程`));
+  const plan = element("section","plan");
+  plan.id = "day-plan";
+  const planHead = element("div","plan-head");
+  append(planHead,element("h2","","當日行程"),element("span","", "時間僅供參考"));
+  const list = element("ol","timeline");
+  day.events.forEach((event,index) => append(list,renderEvent(day,event,index,now)));
+  append(plan,planHead,list);
+  const important = element("section","important");
+  important.id = "important";
+  append(important,element("h2","","現場提醒"));
+  const notices = Array.isArray(day.notices) ? day.notices : [day.notice];
+  const noticeList = element("ul","important-list");
+  for (const notice of notices) {
+    if (typeof notice === "string" && notice.trim())
+      append(noticeList,element("li","",notice));
+  }
+  if (noticeList.childElementCount) append(important,noticeList);
+  const noticeActions = element("div","important-actions");
+  const sources = Array.isArray(day.noticeLinks) ? day.noticeLinks :
+    [{label:"查看官方資訊",url:day.noticeUrl}];
+  for (const source of sources) append(noticeActions,link(source.url,source.label));
+  if (noticeActions.childElementCount) append(important,noticeActions);
+  return {dayHead,important,plan};
+}
+function renderSide(day,now) {
+  const side = element("aside","side");
+  append(side,element("span","side-kicker","TRIP AT A GLANCE"),
+    element("h2","",day.title),element("p","",day.subtitle),
+    element("hr",""),element("strong","side-clock",`日本時間 ${now.time}`),
+    element("span","",day.date === now.date ? "今日行程" : "手動查看行程"),
+    element("hr",""),element("p","", "班次及營運狀態以現場與官方資訊為準。"));
+  return side;
+}
+function changeDate(date) {
+  if (selectedDate === date) return;
+  const day = trip.days.find(item => item.date === date);
+  if (!day) return;
+  selectedDate = date;
+  expandedEvent = -1;
+  const now = japaneseNow();
+  const itinerary = app.querySelector("#itinerary");
+  const {dayHead,important,plan} = renderDay(day,now);
+  itinerary.querySelector(".day-head").replaceWith(dayHead);
+  itinerary.querySelector(".important").replaceWith(important);
+  itinerary.querySelector(".plan").replaceWith(plan);
+  itinerary.classList.add("date-changing");
+  for (const button of itinerary.querySelectorAll(".date")) {
+    const selected = button.dataset.date === date;
+    button.classList.toggle("selected",selected);
+    button.setAttribute("aria-current",selected ? "date" : "false");
+  }
+  app.querySelector(".side")?.replaceWith(renderSide(day,now));
+  lastRenderedJstKey = `${now.date}T${now.time}`;
+  itinerary.querySelector(".date-list").scrollIntoView({
+    behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    block:"start"
+  });
+}
 function render() {
   if (!trip) return;
   const day = trip.days.find(item => item.date === selectedDate) || trip.days[0];
   const now = japaneseNow();
-  const focus = day.date === now.date ? focusEvent(day,now) : {event:day.events[0],index:0};
-  if (expandedEvent === -1 && focus.event && focus.index >= 0)
-    expandedEvent = hasEventDetail(focus.event) ? focus.index : -2;
   app.replaceChildren();
 
   const header = element("header","site-header");
@@ -449,60 +513,30 @@ function render() {
       new Intl.DateTimeFormat("zh-TW",{timeZone:"UTC",weekday:"short",month:"numeric",day:"numeric"})
         .format(new Date(item.date + "T00:00:00Z")));
     button.type = "button";
+    button.dataset.date = item.date;
     button.setAttribute("aria-current",item.date === day.date ? "date" : "false");
-    button.addEventListener("click",() => {
-      selectedDate = item.date;
-      expandedEvent = -1;
-      render();
-      app.querySelector(".date-list .selected")?.focus({preventScroll:true});
-      app.querySelector(".date-list")?.scrollIntoView({behavior:"instant",block:"start"});
-    });
+    button.addEventListener("click",() => changeDate(item.date));
     append(dates,button);
   }
-  const dayHead = element("div","day-head");
-  const heading = element("div","");
-  append(heading,element("p","day-kicker",`${day.date} · ${day.place}`),
-    element("h1","",day.title));
-  append(dayHead,heading,element("span","day-count",`${day.events.length} 個行程`));
-  const plan = element("section","plan");
-  plan.id = "day-plan";
-  const planHead = element("div","plan-head");
-  append(planHead,element("h2","","當日行程"),element("span","", "時間僅供參考"));
-  const list = element("ol","timeline");
-  day.events.forEach((event,index) => append(list,renderEvent(day,event,index,now)));
-  append(plan,planHead,list);
-  const important = element("section","important");
-  important.id = "important";
-  append(important,element("h2","","現場提醒"));
-  const notices = Array.isArray(day.notices) ? day.notices : [day.notice];
-  const noticeList = element("ul","important-list");
-  for (const notice of notices) {
-    if (typeof notice === "string" && notice.trim())
-      append(noticeList,element("li","",notice));
-  }
-  if (noticeList.childElementCount) append(important,noticeList);
-  const noticeActions = element("div","important-actions");
-  const sources = Array.isArray(day.noticeLinks) ? day.noticeLinks :
-    [{label:"查看官方資訊",url:day.noticeUrl}];
-  for (const source of sources) append(noticeActions,link(source.url,source.label));
-  if (noticeActions.childElementCount) append(important,noticeActions);
+  const {dayHead,important,plan} = renderDay(day,now);
   const status = element("p","app-status",offlineStatus);
   status.id = "app-status";
   status.setAttribute("role","status");
   status.setAttribute("aria-live","polite");
   append(itinerary,dates,dayHead,important,plan);
   append(main,current,itinerary,renderQuickInfo(),status);
-  const side = element("aside","side");
-  append(side,element("span","side-kicker","TRIP AT A GLANCE"),
-    element("h2","",day.title),element("p","",day.subtitle),
-    element("hr",""),element("strong","side-clock",`日本時間 ${now.time}`),
-    element("span","",day.date === now.date ? "今日行程" : "手動查看行程"),
-    element("hr",""),element("p","", "班次及營運狀態以現場與官方資訊為準。"));
-  append(shell,main,side);
+  append(shell,main,renderSide(day,now));
   append(app,header,updateBanner,shell);
   const selectedButton = dates.querySelector(".selected");
-  if (selectedButton) dates.scrollLeft = selectedButton.offsetLeft - dates.offsetLeft -
-    (dates.clientWidth - selectedButton.offsetWidth) / 2;
+  if (selectedButton) {
+    const buttonBounds = selectedButton.getBoundingClientRect();
+    const listBounds = dates.getBoundingClientRect();
+    const inset = 8;
+    if (buttonBounds.left < listBounds.left + inset)
+      dates.scrollBy({left:buttonBounds.left - listBounds.left - inset,behavior:"instant"});
+    else if (buttonBounds.right > listBounds.right - inset)
+      dates.scrollBy({left:buttonBounds.right - listBounds.right + inset,behavior:"instant"});
+  }
   lastRenderedJstKey = `${now.date}T${now.time}`;
   showUpdateBanner();
   setScreen(activeScreen,false);
