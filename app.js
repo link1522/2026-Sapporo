@@ -7,6 +7,7 @@ const app = document.querySelector("#app");
 
 let trip = null;
 let selectedDate = null;
+let activeScreen = "now";
 let expandedEvent = -1;
 let serviceRegistration = null;
 let updateRequested = false;
@@ -141,6 +142,7 @@ async function openTrip(passphrase, remember) {
     }
     const now = japaneseNow();
     selectedDate = value.days.some(day => day.date === now.date) ? now.date : value.days[0].date;
+    activeScreen = "now";
     expandedEvent = -1;
     field.value = "";
     unlock.hidden = true;
@@ -163,6 +165,7 @@ function forgetDevice() {
   try { localStorage.removeItem(STORAGE_KEY); } catch {}
   trip = null;
   selectedDate = null;
+  activeScreen = "now";
   expandedEvent = -1;
   app.replaceChildren();
   app.hidden = true;
@@ -178,11 +181,11 @@ function statusFor(day,event,index,now) {
     item.kind !== "arrival" && item.start <= now.time && now.time < item.end);
   if (current === index) return "目前行程";
   const next = day.events.findIndex(item => item.start > now.time);
-  if (current < 0 && next === index) return "下一步";
+  if (current < 0 && next === index) return "接下來";
   return "";
 }
 function focusEvent(day,now) {
-  if (day.date !== now.date) return {event:day.events[0],label:"行程預覽",index:0};
+  if (!day) return {event:null,label:"目前沒有當日行程",index:-1};
   const current = day.events.findIndex(item =>
     item.kind !== "arrival" && item.start <= now.time && now.time < item.end);
   if (current >= 0) return {event:day.events[current],label:"目前行程",index:current};
@@ -282,8 +285,8 @@ function infoPair(label,value) {
 }
 function renderQuickInfo() {
   const section = element("section","quick-info");
-  section.id = "quick-info";
-  append(section,element("h2","","旅程資訊"));
+  section.id = "info";
+  append(section,element("h1","","旅程資訊"));
   if (Array.isArray(trip.flights) && trip.flights.length) {
     const flights = element("div","info-group");
     append(flights,element("h3","","航班"));
@@ -328,21 +331,69 @@ function renderQuickInfo() {
   }
   return section;
 }
-function renderNext(day,now,focus=focusEvent(day,now)) {
-  const next = element("section","next");
-  next.id = "next-step";
-  append(next,element("span","next-dot",""));
-  const nextContent = element("div","next-content");
-  append(nextContent,element("span","next-label",
-    focus.event ? `${focus.label} · ${focus.event.startLabel || focus.event.start}` : focus.label));
-  append(nextContent,element("h2","",focus.event?.title || "請查看完整行程"));
-  if (focus.event) {
-    append(nextContent,element("p","",focus.event.note || focus.event.place));
-    if (focus.event.fallback) append(nextContent,element("p","next-fallback",focus.event.fallback));
-    append(nextContent,link(focus.event.mapUrl,"開啟地圖"));
+function nextTripEvent(days,now) {
+  for (const day of days) {
+    if (day.date < now.date) continue;
+    const event = day.events.find(item => day.date > now.date || item.start > now.time);
+    if (event) return {day,event};
   }
-  append(next,nextContent);
-  return next;
+  return null;
+}
+function renderNowItem(event,label,upcoming=false,date="") {
+  const item = element("div",upcoming ? "now-item now-upcoming" : "now-item");
+  append(item,element("span","now-item-label",`${label} · ${date ? `${date} ` : ""}${event.startLabel || event.start}`),
+    element(upcoming ? "h3" : "h2","",event.title));
+  append(item,element("p","",event.note || event.place));
+  if (event.fallback) append(item,element("p","next-fallback",event.fallback));
+  append(item,link(event.mapUrl,"開啟地圖"));
+  return item;
+}
+function renderNow(days,now) {
+  const day = days.find(item => item.date === now.date);
+  const focus = day ? focusEvent(day,now) : null;
+  const upcoming = nextTripEvent(days,now);
+  const section = element("section","now-screen");
+  section.id = "now";
+  const heading = element("div","now-head");
+  append(heading,element("h1","","現在"),
+    element("p","now-clock",`日本時間 ${now.date} ${now.time}`));
+  const summary = element("div","next");
+  const dot = element("span","next-dot","");
+  dot.setAttribute("aria-hidden","true");
+  append(summary,dot);
+  const content = element("div","next-content");
+  if (focus?.label === "目前行程") {
+    append(content,renderNowItem(focus.event,focus.label));
+    if (upcoming) append(content,renderNowItem(upcoming.event,"接下來",true,
+      upcoming.day.date === now.date ? "" : upcoming.day.date));
+    else append(content,append(element("div","now-upcoming"),
+      element("span","now-item-label","接下來"),
+      element("p","","目前沒有後續行程")));
+  } else if (upcoming) {
+    append(content,renderNowItem(upcoming.event,"接下來",false,
+      upcoming.day.date === now.date ? "" : upcoming.day.date));
+  } else {
+    append(content,element("h2","","目前沒有後續行程"));
+  }
+  append(summary,content);
+  const targetDate = focus?.label === "目前行程" ? day.date : upcoming?.day.date;
+  const openPlan = element("button","now-plan-button",targetDate ? "查看這天行程" : "查看完整行程");
+  openPlan.type = "button";
+  openPlan.addEventListener("click",() => {
+    if (targetDate) selectedDate = targetDate;
+    expandedEvent = -1;
+    activeScreen = "itinerary";
+    render();
+    window.scrollTo(0,0);
+    const heading = app.querySelector("#itinerary h1");
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({preventScroll:true});
+    }
+  });
+  append(section,heading,summary,
+    element("p","now-caveat","依預定時間推算；班次及營運狀態以現場與官方資訊為準。"),openPlan);
+  return section;
 }
 function showUpdateBanner() {
   const banner = app.querySelector("#update-banner");
@@ -352,8 +403,8 @@ function render() {
   if (!trip) return;
   const day = trip.days.find(item => item.date === selectedDate) || trip.days[0];
   const now = japaneseNow();
-  const focus = focusEvent(day,now);
-  if (expandedEvent === -1 && focus.index >= 0)
+  const focus = day.date === now.date ? focusEvent(day,now) : {event:day.events[0],index:0};
+  if (expandedEvent === -1 && focus.event && focus.index >= 0)
     expandedEvent = hasEventDetail(focus.event) ? focus.index : -2;
   app.replaceChildren();
 
@@ -366,18 +417,15 @@ function render() {
   forget.addEventListener("click",forgetDevice);
   append(headerInner,forget);
   const nav = element("nav","section-nav");
-  nav.setAttribute("aria-label","頁面區段");
+  nav.setAttribute("aria-label","切換畫面");
   for (const [label,target] of [
-    ["下一步","#next-step"],["提醒","#important"],["行程","#day-plan"],["資訊","#quick-info"]]) {
-    const anchor = element("a","",label);
-    anchor.href = target;
-    anchor.addEventListener("click",event => {
-      event.preventDefault();
-      app.querySelector(target)?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",block:"start"});
-      history.replaceState(null,"",target);
-      setActiveSection(target);
-    });
-    append(nav,anchor);
+    ["現在","now"],["行程","itinerary"],["資訊","info"]]) {
+    const button = element("button","",label);
+    button.type = "button";
+    button.dataset.screen = target;
+    button.setAttribute("aria-controls",target);
+    button.addEventListener("click",() => setScreen(target));
+    append(nav,button);
   }
   append(header,headerInner,nav);
   const updateBanner = element("div","update-banner");
@@ -395,6 +443,9 @@ function render() {
 
   const shell = element("main","shell");
   const main = element("div","main-column");
+  const current = renderNow(trip.days,now);
+  const itinerary = element("section","itinerary-screen");
+  itinerary.id = "itinerary";
   const dates = element("nav","date-list");
   dates.setAttribute("aria-label","選擇日期");
   for (const item of trip.days) {
@@ -407,20 +458,20 @@ function render() {
       selectedDate = item.date;
       expandedEvent = -1;
       render();
-      window.scrollTo(0,0);
+      app.querySelector(".date-list .selected")?.focus({preventScroll:true});
+      app.querySelector(".date-list")?.scrollIntoView({behavior:"instant",block:"start"});
     });
     append(dates,button);
   }
   const dayHead = element("div","day-head");
   const heading = element("div","");
-  append(heading,element("p","day-kicker",`${day.place} · 日本時間 ${now.time}`),
+  append(heading,element("p","day-kicker",`${day.date} · ${day.place}`),
     element("h1","",day.title));
   append(dayHead,heading,element("span","day-count",`${day.events.length} 個行程`));
-  const next = renderNext(day,now,focus);
   const plan = element("section","plan");
   plan.id = "day-plan";
   const planHead = element("div","plan-head");
-  append(planHead,element("h2","","今日行程"),element("span","", "時間僅供參考"));
+  append(planHead,element("h2","","當日行程"),element("span","", "時間僅供參考"));
   const list = element("ol","timeline");
   day.events.forEach((event,index) => append(list,renderEvent(day,event,index,now)));
   append(plan,planHead,list);
@@ -444,7 +495,8 @@ function render() {
   status.id = "app-status";
   status.setAttribute("role","status");
   status.setAttribute("aria-live","polite");
-  append(main,dates,dayHead,next,important,plan,renderQuickInfo(),footer,status);
+  append(itinerary,dates,dayHead,important,plan);
+  append(main,current,itinerary,renderQuickInfo(),footer,status);
   const side = element("aside","side");
   append(side,element("span","side-kicker","TRIP AT A GLANCE"),
     element("h2","",day.title),element("p","",day.subtitle),
@@ -458,20 +510,31 @@ function render() {
     (dates.clientWidth - selectedButton.offsetWidth) / 2;
   lastRenderedJstKey = `${now.date}T${now.time}`;
   showUpdateBanner();
-  setActiveSection("#next-step");
+  setScreen(activeScreen,false);
 }
 function refreshClock() {
   if (!trip || app.hidden) return;
   const now = japaneseNow();
   const key = `${now.date}T${now.time}`;
   if (key === lastRenderedJstKey) return;
-  lastRenderedJstKey = key;
   const day = trip.days.find(item => item.date === selectedDate) || trip.days[0];
-  const currentNext = app.querySelector("#next-step");
-  if (currentNext && !currentNext.contains(document.activeElement))
-    currentNext.replaceWith(renderNext(day,now));
-  const kicker = app.querySelector(".day-kicker");
-  if (kicker) kicker.textContent = `${day.place} · 日本時間 ${now.time}`;
+  const currentNow = app.querySelector("#now");
+  if (currentNow) {
+    const hadFocus = currentNow.contains(document.activeElement);
+    const planFocused = document.activeElement.classList.contains("now-plan-button");
+    const focusedLinkIndex = [...currentNow.querySelectorAll("a")].indexOf(document.activeElement);
+    const updatedNow = renderNow(trip.days,now);
+    updatedNow.hidden = activeScreen !== "now";
+    currentNow.replaceWith(updatedNow);
+    if (hadFocus) {
+      const links = updatedNow.querySelectorAll("a");
+      const focusTarget = planFocused ? updatedNow.querySelector(".now-plan-button") :
+        links[Math.min(focusedLinkIndex,links.length-1)] || updatedNow;
+      if (focusTarget === updatedNow) updatedNow.tabIndex = -1;
+      focusTarget.focus({preventScroll:true});
+    }
+  }
+  lastRenderedJstKey = key;
   const sideClock = app.querySelector(".side-clock");
   if (sideClock) sideClock.textContent = `日本時間 ${now.time}`;
   const metas = app.querySelectorAll(".event-meta");
@@ -487,28 +550,30 @@ setInterval(refreshClock,15_000);
 document.addEventListener("visibilitychange",() => {
   if (document.visibilityState === "visible") refreshClock();
 });
-function setActiveSection(target) {
-  for (const anchor of app.querySelectorAll(".section-nav a")) {
-    const active = anchor.getAttribute("href") === target;
-    anchor.classList.toggle("active",active);
-    if (active) anchor.setAttribute("aria-current","location");
-    else anchor.removeAttribute("aria-current");
+function setScreen(screen,scroll=true) {
+  if (!trip || !["now","itinerary","info"].includes(screen)) return;
+  const focusWasInside = app.querySelector(`#${activeScreen}`)?.contains(document.activeElement);
+  activeScreen = screen;
+  for (const panel of app.querySelectorAll("#now,#itinerary,#info"))
+    panel.hidden = panel.id !== screen;
+  for (const button of app.querySelectorAll(".section-nav button")) {
+    const active = button.dataset.screen === screen;
+    button.classList.toggle("active",active);
+    if (active) button.setAttribute("aria-current","page");
+    else button.removeAttribute("aria-current");
+  }
+  const side = app.querySelector(".side");
+  if (side) side.hidden = screen !== "itinerary";
+  app.querySelector(".shell")?.classList.toggle("single-column",screen !== "itinerary");
+  if (scroll) window.scrollTo(0,0);
+  if (focusWasInside) {
+    const heading = app.querySelector(`#${screen} h1`);
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({preventScroll:true});
+    }
   }
 }
-let scrollScheduled = false;
-window.addEventListener("scroll",() => {
-  if (scrollScheduled || !trip) return;
-  scrollScheduled = true;
-  requestAnimationFrame(() => {
-    scrollScheduled = false;
-    const threshold = matchMedia("(max-width: 760px)").matches ? 70 : 124;
-    let current = "#next-step";
-    for (const target of ["#next-step","#important","#day-plan","#quick-info"]) {
-      if ((app.querySelector(target)?.getBoundingClientRect().top ?? Infinity) <= threshold) current = target;
-    }
-    setActiveSection(current);
-  });
-},{passive:true});
 async function updateOfflineStatus() {
   if (location.protocol === "file:") {
     showStatus("本機預覽；離線安裝需經 HTTPS 或 localhost。");
