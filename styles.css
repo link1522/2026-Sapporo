@@ -14,7 +14,7 @@
 html{scroll-behavior:smooth}
 body{margin:0}
 button,input,a{font:inherit}
-button{cursor:pointer}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 a{color:inherit}
 [hidden]{display:none!important}
 :focus-visible{outline:3px solid var(--focus);outline-offset:3px}
