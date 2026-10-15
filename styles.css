@@ -11,16 +11,15 @@ a{color:inherit}
 .unlock{min-height:100svh;display:grid;place-items:center;padding:24px;background:#f4f5f5}
 .unlock-panel{width:min(100%,390px);background:#fff;border:1px solid #e9eaeb;border-radius:12px;padding:35px 32px}
 .lock-icon{width:49px;height:49px;border-radius:11px;display:block}
-.unlock-kicker{margin:27px 0 7px;color:#697278;font-size:11px;letter-spacing:.15em;font-weight:750}
-.unlock h1{margin:0;font-size:25px;letter-spacing:-.04em}
-.unlock-description{font-size:13px;color:#646d72;line-height:1.7;margin:11px 0 25px}
-.unlock form{display:flex;flex-direction:column;gap:8px}
+.unlock h1{margin:24px 0 0;font-size:25px;letter-spacing:-.04em}
+.unlock form{display:flex;flex-direction:column;gap:8px;margin-top:20px}
 .unlock label{font-size:12px;font-weight:700}
 .unlock input{height:47px;border:1px solid #cbd0d3;border-radius:7px;padding:0 13px;font-size:16px;color:#30363b;background:#fff}
 .unlock form button{height:46px;border:0;border-radius:7px;background:#343b40;color:#fff;font-size:14px;font-weight:750;margin-top:8px}
 .unlock form button:hover{background:#232a2e}
-.unlock-message{min-height:1.4em;font-size:12px;line-height:1.5;color:#a2493a;margin:14px 0 0}
-.unlock-footnote{font-size:11px;color:#697278;margin:18px 0 0}
+.unlock-message{min-height:1.4em;font-size:12px;line-height:1.5;color:#697278;margin:14px 0 0}
+.unlock-message:empty{display:none}
+.unlock-message.is-error{color:#a2493a}
 
 .site-header{background:#fff;border-bottom:1px solid #e9eaeb;position:sticky;top:0;z-index:10}
 .header-inner{height:57px;max-width:1120px;margin:auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 28px}

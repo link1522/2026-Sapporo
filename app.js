@@ -131,12 +131,13 @@ async function decrypt(passphrase) {
 }
 async function openTrip(passphrase, remember) {
   message.textContent = "正在解鎖…";
+  message.classList.remove("is-error");
   try {
     const value = await decrypt(passphrase);
     trip = value;
     if (remember) {
       try { localStorage.setItem(STORAGE_KEY,passphrase); }
-      catch { message.textContent = "此瀏覽器無法記住密語；本次仍可閱讀。"; }
+      catch { message.textContent = "此瀏覽器無法記住密碼；本次仍可閱讀。"; }
     }
     const now = japaneseNow();
     selectedDate = value.days.some(day => day.date === now.date) ? now.date : value.days[0].date;
@@ -149,9 +150,14 @@ async function openTrip(passphrase, remember) {
   } catch {
     trip = null;
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
-    message.textContent = "無法解鎖，請檢查密語或重新載入。";
+    showUnlockForm("無法開啟，請確認密碼或重新整理。",true);
     field.focus();
   }
+}
+function showUnlockForm(status = "", isError = false) {
+  form.hidden = false;
+  message.textContent = status;
+  message.classList.toggle("is-error",isError);
 }
 function forgetDevice() {
   try { localStorage.removeItem(STORAGE_KEY); } catch {}
@@ -162,7 +168,7 @@ function forgetDevice() {
   app.hidden = true;
   clearTimeout(statusTimeout);
   unlock.hidden = false;
-  message.textContent = "已忘記此裝置，請重新輸入密語。";
+  showUnlockForm("已清除此裝置儲存的密碼。");
   field.value = "";
   field.focus();
 }
@@ -524,6 +530,13 @@ form.addEventListener("submit",event => {
   event.preventDefault();
   openTrip(field.value,true);
 });
+try {
+  const remembered = localStorage.getItem(STORAGE_KEY);
+  if (remembered) openTrip(remembered,false);
+  else showUnlockForm();
+} catch {
+  showUnlockForm();
+}
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   navigator.serviceWorker.addEventListener("controllerchange",() => {
     if (updateRequested) location.reload();
@@ -542,7 +555,3 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
   })
     .catch(() => showStatus("離線資料暫時無法準備。"));
 }
-try {
-  const remembered = localStorage.getItem(STORAGE_KEY);
-  if (remembered) openTrip(remembered,false);
-} catch {}
