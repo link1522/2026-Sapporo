@@ -407,7 +407,7 @@ function render() {
   const header = element("header","site-header");
   const headerInner = element("div","header-inner");
   append(headerInner,element("span","header-spacer"),
-    element("strong","site-name",typeof trip.title === "string" ? trip.title : "私人行程"));
+    element("strong","site-name",typeof trip.title === "string" ? trip.title : "旅遊行程"));
   const forget = element("button","forget","忘記此裝置");
   forget.type = "button";
   forget.addEventListener("click",forgetDevice);

@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "私人行程",
+  "name": "旅遊行程",
   "short_name": "行程",
-  "description": "私人行程閱讀工具",
+  "description": "2026 北海道札幌之旅",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
