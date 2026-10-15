@@ -437,6 +437,17 @@ function renderSide(day,now) {
     element("hr",""),element("p","", "班次及營運狀態以現場與官方資訊為準。"));
   return side;
 }
+function keepSelectedDateVisible(dates) {
+  const selectedButton = dates.querySelector(".selected");
+  if (!selectedButton) return;
+  const buttonBounds = selectedButton.getBoundingClientRect();
+  const listBounds = dates.getBoundingClientRect();
+  const inset = 8;
+  if (buttonBounds.left < listBounds.left + inset)
+    dates.scrollBy({left:buttonBounds.left - listBounds.left - inset,behavior:"instant"});
+  else if (buttonBounds.right > listBounds.right - inset)
+    dates.scrollBy({left:buttonBounds.right - listBounds.right + inset,behavior:"instant"});
+}
 function changeDate(date) {
   if (selectedDate === date) return;
   const day = trip.days.find(item => item.date === date);
@@ -457,10 +468,7 @@ function changeDate(date) {
   }
   app.querySelector(".side")?.replaceWith(renderSide(day,now));
   lastRenderedJstKey = `${now.date}T${now.time}`;
-  itinerary.querySelector(".date-list").scrollIntoView({
-    behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-    block:"start"
-  });
+  keepSelectedDateVisible(itinerary.querySelector(".date-list"));
 }
 function render() {
   if (!trip) return;
@@ -527,16 +535,7 @@ function render() {
   append(main,current,itinerary,renderQuickInfo(),status);
   append(shell,main,renderSide(day,now));
   append(app,header,updateBanner,shell);
-  const selectedButton = dates.querySelector(".selected");
-  if (selectedButton) {
-    const buttonBounds = selectedButton.getBoundingClientRect();
-    const listBounds = dates.getBoundingClientRect();
-    const inset = 8;
-    if (buttonBounds.left < listBounds.left + inset)
-      dates.scrollBy({left:buttonBounds.left - listBounds.left - inset,behavior:"instant"});
-    else if (buttonBounds.right > listBounds.right - inset)
-      dates.scrollBy({left:buttonBounds.right - listBounds.right + inset,behavior:"instant"});
-  }
+  keepSelectedDateVisible(dates);
   lastRenderedJstKey = `${now.date}T${now.time}`;
   showUpdateBanner();
   setScreen(activeScreen,false);

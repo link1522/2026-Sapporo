@@ -1,6 +1,6 @@
-const CACHE_NAME = "private-itinerary-v38";
+const CACHE_NAME = "private-itinerary-v39";
 const APP_FILES = [
-  "./", "./index.html", "./app.js?v=38", "./data.enc.js",
+  "./", "./index.html", "./app.js?v=39", "./data.enc.js",
   "./manifest.webmanifest", "./icon.svg", "./icons/icon-192.png", "./icons/icon-512.png"
 ];
 
