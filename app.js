@@ -12,6 +12,7 @@ let expandedEvent = -1;
 let serviceRegistration = null;
 let updateRequested = false;
 let statusTimeout = null;
+let offlineStatus = "檢查離線資料中…";
 let lastRenderedJstKey = "";
 
 function element(tag, className, content) {
@@ -85,6 +86,11 @@ function showStatus(value,alert=false) {
   const status = document.querySelector("#app-status");
   if (!status) return;
   clearTimeout(statusTimeout);
+  if (!alert) {
+    offlineStatus = value;
+    const infoStatus = document.querySelector("#offline-status");
+    if (infoStatus) infoStatus.textContent = value;
+  }
   status.textContent = value;
   status.classList.toggle("status-alert",alert);
   if (alert) statusTimeout = setTimeout(() => status.classList.remove("status-alert"),5000);
@@ -329,6 +335,11 @@ function renderQuickInfo() {
     append(group,links);
     append(section,group);
   }
+  const details = element("div","info-meta");
+  const infoStatus = element("p","",offlineStatus);
+  infoStatus.id = "offline-status";
+  append(details,element("p","",`資料更新：${trip.updated} · 日本時間（JST）`),infoStatus);
+  append(section,details);
   return section;
 }
 function nextTripEvent(days,now) {
@@ -376,23 +387,8 @@ function renderNow(days,now) {
     append(content,element("h2","","目前沒有後續行程"));
   }
   append(summary,content);
-  const targetDate = focus?.label === "目前行程" ? day.date : upcoming?.day.date;
-  const openPlan = element("button","now-plan-button",targetDate ? "查看這天行程" : "查看完整行程");
-  openPlan.type = "button";
-  openPlan.addEventListener("click",() => {
-    if (targetDate) selectedDate = targetDate;
-    expandedEvent = -1;
-    activeScreen = "itinerary";
-    render();
-    window.scrollTo(0,0);
-    const heading = app.querySelector("#itinerary h1");
-    if (heading) {
-      heading.tabIndex = -1;
-      heading.focus({preventScroll:true});
-    }
-  });
   append(section,heading,summary,
-    element("p","now-caveat","依預定時間推算；班次及營運狀態以現場與官方資訊為準。"),openPlan);
+    element("p","now-caveat","依預定時間推算；班次及營運狀態以現場與官方資訊為準。"));
   return section;
 }
 function showUpdateBanner() {
@@ -490,13 +486,12 @@ function render() {
     [{label:"查看官方資訊",url:day.noticeUrl}];
   for (const source of sources) append(noticeActions,link(source.url,source.label));
   if (noticeActions.childElementCount) append(important,noticeActions);
-  const footer = element("p","data-note",`資料更新：${trip.updated} · 日本時間（JST）`);
-  const status = element("p","app-status","檢查離線資料中…");
+  const status = element("p","app-status",offlineStatus);
   status.id = "app-status";
   status.setAttribute("role","status");
   status.setAttribute("aria-live","polite");
   append(itinerary,dates,dayHead,important,plan);
-  append(main,current,itinerary,renderQuickInfo(),footer,status);
+  append(main,current,itinerary,renderQuickInfo(),status);
   const side = element("aside","side");
   append(side,element("span","side-kicker","TRIP AT A GLANCE"),
     element("h2","",day.title),element("p","",day.subtitle),
@@ -521,15 +516,13 @@ function refreshClock() {
   const currentNow = app.querySelector("#now");
   if (currentNow) {
     const hadFocus = currentNow.contains(document.activeElement);
-    const planFocused = document.activeElement.classList.contains("now-plan-button");
     const focusedLinkIndex = [...currentNow.querySelectorAll("a")].indexOf(document.activeElement);
     const updatedNow = renderNow(trip.days,now);
     updatedNow.hidden = activeScreen !== "now";
     currentNow.replaceWith(updatedNow);
     if (hadFocus) {
       const links = updatedNow.querySelectorAll("a");
-      const focusTarget = planFocused ? updatedNow.querySelector(".now-plan-button") :
-        links[Math.min(focusedLinkIndex,links.length-1)] || updatedNow;
+      const focusTarget = links[Math.min(focusedLinkIndex,links.length-1)] || updatedNow;
       if (focusTarget === updatedNow) updatedNow.tabIndex = -1;
       focusTarget.focus({preventScroll:true});
     }
